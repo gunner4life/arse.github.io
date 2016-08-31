@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://gunner4life.com/"/>
-  <updated>2016-08-31T01:55:27.000Z</updated>
+  <updated>2016-08-31T08:23:11.000Z</updated>
   <id>http://gunner4life.com/</id>
   
   <author>
@@ -14,6 +14,44 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Android消息机制</title>
+    <link href="http://gunner4life.com//blog/2016/08/31/Android%E6%B6%88%E6%81%AF%E6%9C%BA%E5%88%B6/"/>
+    <id>http://gunner4life.com//blog/2016/08/31/Android消息机制/</id>
+    <published>2016-08-31T08:22:38.000Z</published>
+    <updated>2016-08-31T08:23:11.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>Android的消息机制主要是指Handler的运行机制. 而Handler的运行需要底层的MessageQueue和Looper做支撑</p>
+<ul>
+<li>MessageQueue内部存储了一组消息，以队列的形式对外提供入列和出列的操作，采用的是单链表的数据结构来存储消息队列</li>
+<li>Looper会以无限循环的形式去查找MessageQueue中是否有新的消息，如有就处理消息，否则就一直等待着</li>
+</ul>
+<h2 id="Handler的创建"><a href="#Handler的创建" class="headerlink" title="Handler的创建"></a>Handler的创建</h2><p>首先看一下Handler的构造函数<br><img src="http://dn-arsenan.qbox.me/14726229847414.jpg" alt=""><br>可以看到会通过调用Looper.myLooper()方法来获取一个Looper对象，如果Looper对象为空，则会抛出一个运行时异常，继续看myLooper方法<br><img src="http://dn-arsenan.qbox.me/14726231666612.jpg" alt=""><br>这个方法非常简单，就是从sThreadLocal对象中取出Looper，那么由此而来的一个问题便是在哪里给sThreadLocal设置了Looper，通过阅读代码可知，设置的地方位于prepare方法当中<br><img src="http://dn-arsenan.qbox.me/14726233498932.jpg" alt=""><br>总结一下，就是必须先调用Looper.prepare()方法来创建一个Looper对象，否则无法创建Handler对象<br>But…<br>为什么我们在主线程中不需要通过调用prepare方法也能创建Handler呢？<br>这是由于在程序启动时，系统已经帮我们自动调用了Looper.prepareMainLooper()方法，当App的进程创建好之后，会去执行ActivityThread中的main()方法，main方法的代码如下<br><img src="http://dn-arsenan.qbox.me/14726240426790.jpg" alt=""><br>而prepareMainLooper方法中又会去调用prepare方法<br><img src="http://dn-arsenan.qbox.me/14726241118057.jpg" alt=""><br>因此我们应用程序的主线程种始终存在一个Looper对象，因而不需要再通过调用Looper.prepare来再进行创建，可以直接在主线程中直接创建Handler对象</p>
+<h2 id="发送Message"><a href="#发送Message" class="headerlink" title="发送Message"></a>发送Message</h2><p>通常我们先实例化一个Message对象，然后通过Handler的sendMessage方法来发送这条消息，那么这条消息是如何被发送出去的呢？<br>首先看一下sendMessage方法<br><img src="http://dn-arsenan.qbox.me/14726255951577.jpg" alt=""><br>会调用sendMessageDelayed方法，delayMillis为0，表示的是消息不做延时发送<br><img src="http://dn-arsenan.qbox.me/14726256231796.jpg" alt=""><br>然后会继续调用sendMessageAtTime方法，传入发送的时间<br><img src="http://dn-arsenan.qbox.me/14726257474287.jpg" alt=""><br>这里可以看到在继续处理之前会先获取MessageQueue实例，这个就是我们前面提到的消息存储的队列，这个队列是在Handler创建时从Looper中获取的(详见上面Handler构造函数)，而Looper中的mQueue是在Looper创建时new出来的<br>总结起来就是Looper.prepare时会调用Looper的构造函数，创建一个MessageQueue对象，然后Handler在实例化的时候会将当前Looper的MessageQueue赋值给Handler<br>继续上面发送消息的流程，可以看到获取到这个MessageQueue对象之后，会调用enqueueMessage方法<br><img src="http://dn-arsenan.qbox.me/14726264714931.jpg" alt=""><br>首先会设置Message中的target为当前的Handler，然后继续调用MessageQueue的enqueueMessage方法<br><img src="http://dn-arsenan.qbox.me/14726267478155.jpg" alt=""><br>通过代码可以知道这是通过单链表的方式来存储消息，消息的入队其实就是将所有的消息按时间来进行排序，通过以上流程就完成了一个Message的入队操作(通过MessageQueue存储)</p>
+<h2 id="Looper获取消息"><a href="#Looper获取消息" class="headerlink" title="Looper获取消息"></a>Looper获取消息</h2><p>前面分析了一个Message从创建到最终如何存储到MessageQueue的过程，接下来我们看看MessageQueue中消息的出队流程。MessageQueue的出队是依靠Looper中的loop方法来实现的<br><img src="http://dn-arsenan.qbox.me/14726277745914.jpg" alt=""><br><img src="http://dn-arsenan.qbox.me/14726291564401.jpg" alt=""></p>
+<p>可以看到loop方法是一个死循环，唯一跳出循环的方式是MessageQueue的next方法返回了null。而next方法是一个阻塞操作，当没有消息时，next方法会一直阻塞在那里，这也导致loop方法一直阻塞在那里(新消息来了后会继续处理，处理完后继续阻塞)。只有当Looper的quit方法被调用时，Looper会调用MessageQueue的quit或者quitSafely方法来通知消息队列退出，当消息队列被标为退出状态时，它的next方法就会返回null，此时loop方法才会跳出死循环<br>总结一下就是，loop方法会不断的调用MessageQueue的next方法来获取队列中的消息，没有消息时，也不会退出循环，当有新消息来的时候又能够及时的去处理消息，只有通过调用quit方法才能让Looper退出循环</p>
+<h2 id="处理消息"><a href="#处理消息" class="headerlink" title="处理消息"></a>处理消息</h2><p>继续上面的分析可知，loop中取出的消息是通过调用msg.target.dispatchMessage来处理的，这个msg.target就是对应的Handler对象(详见上面Handler的sendMessage方法)，即消息最终是交由Handler的dispatchMessage来处理的，而dispatchMessage是在创建Handler时所使用的Looper中执行的，这样就成功的将代码逻辑切换到指定的线程中去执行了<br><img src="http://dn-arsenan.qbox.me/14726305495162.jpg" alt=""><br>dispatchMessage方法的实现如上，当没有callback时(Handler sendMessage方法就是没有callback)，最终会执行handleMessage方法，这样就收到了之前发送的消息</p>
+<h2 id="其它"><a href="#其它" class="headerlink" title="其它"></a>其它</h2><p>整个消息处理流程示意图如下<br><img src="http://dn-arsenan.qbox.me/14726313398051.jpg" alt=""></p>
+<p>另外除了发送消息之外，还有几种方法能在子线程中进行UI操作:</p>
+<ul>
+<li>Handler的post方法</li>
+<li>View的post方法</li>
+<li>Activity的runOnUiThread方法<br>具体的实现跟上面的流程没什么区别，唯一的区别是消息的不是在handleMessage中处理，而是通过callback方式处理(参见上面的dispatchMessage)</li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="http://blog.csdn.net/guolin_blog/article/details/9991569" target="_blank" rel="external">Android异步消息处理机制完全解析，带你从源码的角度彻底理解</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;Android的消息机制主要是指Handler的运行机制. 而Handler的运行需要底层的MessageQueue和Looper做支撑&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;MessageQueue内部存储了一组消息，以队列的形式对外提供入列和出列的操作，采用的是单链表的数据结构来存
+    
+    </summary>
+    
+    
+  </entry>
   
   <entry>
     <title>Android系统启动流程</title>
