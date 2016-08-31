@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://gunner4life.com/"/>
-  <updated>2016-08-31T09:07:46.000Z</updated>
+  <updated>2016-08-31T12:42:34.000Z</updated>
   <id>http://gunner4life.com/</id>
   
   <author>
@@ -14,6 +14,46 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Android事件分发机制</title>
+    <link href="http://gunner4life.com//blog/2016/08/31/Android%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/"/>
+    <id>http://gunner4life.com//blog/2016/08/31/Android事件分发机制/</id>
+    <published>2016-08-31T12:42:09.000Z</published>
+    <updated>2016-08-31T12:42:34.000Z</updated>
+    
+    <content type="html"><![CDATA[<h2 id="分发流程概述"><a href="#分发流程概述" class="headerlink" title="分发流程概述"></a>分发流程概述</h2><p>所有Touch事件都被封装成MotionEvent对象，包括Touch的位置、时间、历史记录等等。事件最先传递给当前的Activity，由Activity的dispatchTouchEvent来进行事件的分发<br><img src="http://dn-arsenan.qbox.me/14726430496180.jpg" alt=""><br>事件开始交给Activity所附属的Window来进行分发，Window是个抽象类，具体的实现在PhoneWindow当中<br><img src="http://dn-arsenan.qbox.me/14726432484932.jpg" alt=""><br>其中mDecor为DecorView，即根View<br><img src="http://dn-arsenan.qbox.me/14726431452301.jpg" alt=""><br>即事件传递到了ViewGroup的dispatchTouchEvent中，然后继续传递给子元素(默认情况)<br>总的来说，当一个点击事件产生后，它的传递过程遵循如下顺序：Activity -&gt; Window -&gt; View，即事件总是先传递给Activity，Activity再传递给Window，最后Window再传递给顶级的View(DecorView)，顶级View接收到事件后，就会按照事件分发机制去分发事件。如果一个View的onTouchEvent返回false(没有消耗事件)，那么它父容器的onTouchEvent将会被调用，依次类推，如果所有的元素都不去处理这个事件，那么这个事件最终将会传递给Activity处理，即Activity的onTouchEvent方法会被调用</p>
+<h2 id="要点"><a href="#要点" class="headerlink" title="要点"></a>要点</h2><ul>
+<li>如果ViewGroup的onInterceptTouchEvent方法返回true就表示它要拦截当前事件(ViewGroup的onInterceptTouchEvent默认返回false，即默认不拦截任何事件)，接着这个ViewGroup的onTouchEvent就会被调用，如果onInterceptTouchEvent返回false，那么就会继续向下调用子元素的dispatchTouchEvent方法</li>
+<li>当一个View需要处理事件的时候，如果它没有设置onTouchListener，那么就会直接调用onTouchEvent，如果设置了onTouchListener，那么就要看Listener的onTouch方法返回值，为false，则当前View的onTouchEvent方法会被调用，如果为true，则onTouchEvent将不会被调用。</li>
+<li>给View设置onTouchListener，其优先级比onTouchEvent要高，在onTouchEvent方法中，如果设置了onClickListener，那么它的onClick方法会被调用。可以看出，onClickListener的优先级最低</li>
+<li>某个View一旦拦截了某个事件，那么这一个事件序列里面后续的Move、Down等事件都会交由它处理，并且它的onTnterceptTouchEvent不会再调用</li>
+<li>某个View一旦开始处理事件，如果它不消耗ACTION_DOWN事件，那么同一时间序列中的其他事件都不会再交给它来处理，并且事件将重新交给它的父元素处理，即父元素的onTouchEvent会被调用</li>
+<li>View的onTouchEvent默认都会消耗事件(返回true)，除非它是不可点击的(clickable和longClickable同时为false)，但是enable属性不会影响onTouchEvent返回值</li>
+<li>事件传递过程是由外向内的，即事件总是先传递给父元素，然后再由父元素分发给子View，通过requestDisallowInterceptTouchEvent方法可以在子元素中干预父元素的时间分发，但是ACTION_DOWN事件除外，它不受此影响</li>
+</ul>
+<ol>
+<li><p>View不处理事件流程图<br><img src="http://dn-arsenan.qbox.me/ignorant-view-example.jpg" alt="ignorant-view-example"></p>
+</li>
+<li><p>View处理事件流程图<br><img src="http://dn-arsenan.qbox.me/interested-view-example.jpg" alt="interested-view-example"></p>
+</li>
+<li><p>ViewGroup拦截事件处理流程图<br><img src="http://dn-arsenan.qbox.me/14726463384715.jpg" alt=""></p>
+</li>
+</ol>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a href="http://a.codekk.com/detail/Android/Trinea/%E5%85%AC%E5%85%B1%E6%8A%80%E6%9C%AF%E7%82%B9%E4%B9%8B%20View%20%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92" target="_blank" rel="external">公共技术点之View事件传递</a></li>
+<li><a href="http://trinea.github.io/download/pdf/android/PRE_andevcon_mastering-the-android-touch-system.pdf" target="_blank" rel="external">Mastering the Android Touch System</a></li>
+</ul>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;h2 id=&quot;分发流程概述&quot;&gt;&lt;a href=&quot;#分发流程概述&quot; class=&quot;headerlink&quot; title=&quot;分发流程概述&quot;&gt;&lt;/a&gt;分发流程概述&lt;/h2&gt;&lt;p&gt;所有Touch事件都被封装成MotionEvent对象，包括Touch的位置、时间、历史记录等等。事件最先传
+    
+    </summary>
+    
+    
+  </entry>
   
   <entry>
     <title>Android消息机制</title>
