@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://gunner4life.com/"/>
-  <updated>2016-08-31T12:42:34.000Z</updated>
+  <updated>2016-09-01T10:15:56.000Z</updated>
   <id>http://gunner4life.com/</id>
   
   <author>
@@ -14,6 +14,36 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Android界面显示分析</title>
+    <link href="http://gunner4life.com//blog/2016/09/01/Android%E7%95%8C%E9%9D%A2%E6%98%BE%E7%A4%BA%E5%88%86%E6%9E%90/"/>
+    <id>http://gunner4life.com//blog/2016/09/01/Android界面显示分析/</id>
+    <published>2016-09-01T10:15:32.000Z</published>
+    <updated>2016-09-01T10:15:56.000Z</updated>
+    
+    <content type="html"><![CDATA[<h2 id="setContentView"><a href="#setContentView" class="headerlink" title="setContentView"></a>setContentView</h2><p>在Activity中通常我们只需要调用setContentView即可展示我们想要显示的页面，那么setContentView里具体的实现是怎样的呢? 我们来看下它的源码<br><img src="http://dn-arsenan.qbox.me/14726968277647.jpg" alt=""><br>可以看到会去调用Window的setContentView方法，Window是一个抽象类，它的实现类为PhoneWindow，即会调用到PhoneWindow的setContentView方法<br><img src="http://dn-arsenan.qbox.me/14726978743152.jpg" alt=""><br>如果是第一次调用，则调用installDecor方法，否则判断是否设置了FEATURE_CONTENT_TRANSITIONS属性(默认false)，如果没有则移除mContentParent内所有的子View(所以说在我们应用程序里可以多次调用setContentView来显示界面，因为会removeAllViews)，接着会调用LayoutInflater的inflater方法，将资源文件转换为View树，并且添加至mContentParent视图中<br>回过头，继续看第一次调用时会调用的installDecor方法<br><img src="http://dn-arsenan.qbox.me/14726988301196.jpg" alt=""><br>首先会判断mDecor对象是否为空，如果为空则会调用generateDecor创建一个DecorView(DecorView是PhoneWindow的内部类，继承了FrameLayout，是对FrameLayout进行功能的修饰，是所有应用窗口的根View)<br><img src="http://dn-arsenan.qbox.me/14726989748099.jpg" alt=""><br>回到installDecor继续往下看<br><img src="http://dn-arsenan.qbox.me/14726999538555.jpg" alt=""><br>会调用generateLayout方法<br><img src="http://dn-arsenan.qbox.me/14727000942738.jpg" alt=""><br>开始时会根据设置的theme或者feature，对Window进行设置(这也是为什么在Java文件设置Feature时必须在setContentView之前调用的原因，因为Feature的处理是在setContentView里执行的)，接着会运行<br><img src="http://dn-arsenan.qbox.me/14727009766157.jpg" alt=""><br>通过inflate将布局文件转为对应的View，然后添加到decor(PhoneWindow的mDecor)中去<br>最后这些都执行完之后会继续执行PhoneWindow的setContentView中的代码，可以看到最后会调用一个Callback接口的成员函数onContentChanged来通知对应的Activity组件视图内容发生了变化，这个Callback对象是在Activity的attach方法中进行设置的<br><img src="http://dn-arsenan.qbox.me/14727100316941.jpg" alt=""><br>而attach方法的调用则是在ActivityThread的performLaunchActivity中，即Activity启动后调用的(详见<a href="http://gunner4life.com/blog/2016/08/31/Activity%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">Activity启动过程分析</a>)</p>
+<h2 id="makeVisible"><a href="#makeVisible" class="headerlink" title="makeVisible"></a>makeVisible</h2><p>上面分析了调用setContentView后流程，可以看到这个方法自身是不显示布局的，那么系统是如何来显示页面的呢？<br>这一点就需要回到ActivityThread里去了，在Activity的performLaunchActivity执行完后会调用handleResumeActivity方法<br><img src="http://dn-arsenan.qbox.me/14727118138044.jpg" alt=""><br>最后会调用到Activity的makeVisible方法<br><img src="http://dn-arsenan.qbox.me/14727122011299.jpg" alt=""><br>makeVisible方法会调用ViewManager的addView方法，DecorView对象为其中的一个参数，然后会调用DecorView的setVisibility将View设置为VISIBLE，这样就能够把setContentView设置的布局显示出来了</p>
+<h2 id="Window-WindowManager-ViewManager"><a href="#Window-WindowManager-ViewManager" class="headerlink" title="Window WindowManager ViewManager"></a>Window WindowManager ViewManager</h2><p>上面说了makeVisible方法中会调用ViewManager的addView方法，那么这个方法是干什么用的呢？要理解这个，首先需要知道几个概念: Window WindowManager<br>Window是一个抽象类，它的具体实现是PhoneWindow。Window是一个抽象的概念(Window)，每一个Window都对应着一个View和一个ViewRootImpl, Window和View通过ViewRootImpl来建立联系，因此Window并不是实际存在的，它是以View的形式存在。这点从WindowManager的定义也可以看出，它提供的三个接口方法addView、updateViewLayout以及removeView都是针对View的，这说明View才是Window存在的实体。在实际使用中无法直接访问Window，对Window的访问必须通过WindowManager<br>WindowManager继承自ViewManager，他们都是接口，其中ViewManager代码如下:<br><img src="http://dn-arsenan.qbox.me/14727167185393.jpg" alt=""><br>可以看到它提供了对子View进行添加、删除、更新的方法，也就是说WindowManager通过继承它也得到了这些能力，而它的真正实现类是WindowManagerImpl<br>回到Activity的attach方法<br><img src="http://dn-arsenan.qbox.me/14727170957109.jpg" alt=""><br><img src="http://dn-arsenan.qbox.me/14727171470238.jpg" alt=""><br>可以看到对Activity的PhoneWindow调用了setWindowManager方法，这个方法里会调用WindowManagerImpl的createLocalWindowManager方法<br><img src="http://dn-arsenan.qbox.me/14727172589596.jpg" alt=""><br>总结一下就是Activity及PhoneWindow中的mWindowManager对象指向的就是一个WindowManagerImpl对象，<strong>之前makeVisible方法中使用的也就是这个对象</strong><br>接下来就来看看WindowManagerImpl里的几个方法<br><img src="http://dn-arsenan.qbox.me/14727176730576.jpg" alt=""><br>可以看到，WindowManagerImpl并没有直接实现WindowManager里的接口方法，而是全部交给了WindowManagerGlobal来处理<br>在WindowManagerGlobal有几个列表比较重要<br><img src="http://dn-arsenan.qbox.me/14727186421021.jpg" alt=""><br>其中mViews存储的是所有Window所对应的View，mRoots存储的是所有Window所对应的ViewRootImpl，mParams存储的是所有Window所对应的布局参数，在addView中通过如下方式将Window的一系列对象添加到列表中<br><img src="http://dn-arsenan.qbox.me/14727187853619.jpg" alt=""><br>接着会调用ViewRootImpl的setView方法，在里面会调用requestLayout来进行异步刷新请求<br><img src="http://dn-arsenan.qbox.me/14727190812240.jpg" alt=""><br><img src="http://dn-arsenan.qbox.me/14727193489694.jpg" alt=""><br>scheduleTraversals实际上是View绘制的入口，通过这个后续会执行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">doTraversal -&gt; performTraversals -&gt; measure -&gt; layout -&gt; draw</div></pre></td></tr></table></figure>
+<p>接着回到setView方法中，当执行完requestLayout，会继续执行<br><img src="http://dn-arsenan.qbox.me/14727202386172.jpg" alt=""><br>这个mWindowSession是个什么东西呢?<br><img src="http://dn-arsenan.qbox.me/14727203945275.jpg" alt=""><br>通过源码得知，这个IWindowSession是一个Binder对象，它的实现类是Session，(ViewRootImpl)通过它来与WindowManagerService进行通信<br>回到addToDisplay方法中<br><img src="http://dn-arsenan.qbox.me/14727245232338.jpg" alt=""><br>这样就把Window的添加请求交给WindowManagerService去处理了</p>
+<h2 id="其它"><a href="#其它" class="headerlink" title="其它"></a>其它</h2><ul>
+<li><p>Activity层级结构图<br><img src="http://dn-arsenan.qbox.me/2016-03-16_56e8da7959677.jpg" alt="2016-03-16_56e8da7959677"></p>
+</li>
+<li><p>Android窗口管理框架<br><img src="http://dn-arsenan.qbox.me/2016-03-16_56e8da7d2d3a7.jpg" alt="2016-03-16_56e8da7d2d3a7"></p>
+</li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="http://www.kancloud.cn/digest/androidframeworks/127786" target="_blank" rel="external">Activity界面显示全解析</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;h2 id=&quot;setContentView&quot;&gt;&lt;a href=&quot;#setContentView&quot; class=&quot;headerlink&quot; title=&quot;setContentView&quot;&gt;&lt;/a&gt;setContentView&lt;/h2&gt;&lt;p&gt;在Activity中通常我们只需要调用set
+    
+    </summary>
+    
+    
+  </entry>
   
   <entry>
     <title>Android事件分发机制</title>
