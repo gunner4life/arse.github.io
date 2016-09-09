@@ -86,23 +86,30 @@
 
 
 
-<meta name="description" content="分发流程概述所有Touch事件都被封装成MotionEvent对象，包括Touch的位置、时间、历史记录等等。事件最先传递给当前的Activity，由Activity的dispatchTouchEvent来进行事件的分发事件开始交给Activity所附属的Window来进行分发，Window是个抽象类，具体的实现在PhoneWindow当中其中mDecor为DecorView，即根View即事件传">
+<meta name="description" content="JVM内存分配策略Java程序运行时的内存分配策略有三种，分别是静态分配、栈式分配和堆式分配，所使用的内存空间依次对应为静态存储区(方法区)、栈区和堆区
+
+静态存储区(方法区)主要存放静态数据、全局static数据和常量。这块内存在程序编译时就已经分配好，并且在程序整个运行期间都存在
+
+栈区当方法被执行时，方法体内的局部变量(包括基础数据类型、对象的引用)都在栈上创建，并在方法执行结束时这些局部变">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Android事件分发机制">
-<meta property="og:url" content="http://gunner4life.com/blog/2016/08/31/Android事件分发机制/index.html">
+<meta property="og:title" content="JVM内存管理">
+<meta property="og:url" content="http://gunner4life.com/blog/2016/09/09/JVM内存管理/index.html">
 <meta property="og:site_name" content="Arse_nan">
-<meta property="og:description" content="分发流程概述所有Touch事件都被封装成MotionEvent对象，包括Touch的位置、时间、历史记录等等。事件最先传递给当前的Activity，由Activity的dispatchTouchEvent来进行事件的分发事件开始交给Activity所附属的Window来进行分发，Window是个抽象类，具体的实现在PhoneWindow当中其中mDecor为DecorView，即根View即事件传">
-<meta property="og:image" content="http://dn-arsenan.qbox.me/14726430496180.jpg">
-<meta property="og:image" content="http://dn-arsenan.qbox.me/14726432484932.jpg">
-<meta property="og:image" content="http://dn-arsenan.qbox.me/14726431452301.jpg">
-<meta property="og:image" content="http://dn-arsenan.qbox.me/ignorant-view-example.jpg">
-<meta property="og:image" content="http://dn-arsenan.qbox.me/interested-view-example.jpg">
-<meta property="og:image" content="http://dn-arsenan.qbox.me/14726463384715.jpg">
-<meta property="og:updated_time" content="2016-08-31T12:42:34.000Z">
+<meta property="og:description" content="JVM内存分配策略Java程序运行时的内存分配策略有三种，分别是静态分配、栈式分配和堆式分配，所使用的内存空间依次对应为静态存储区(方法区)、栈区和堆区
+
+静态存储区(方法区)主要存放静态数据、全局static数据和常量。这块内存在程序编译时就已经分配好，并且在程序整个运行期间都存在
+
+栈区当方法被执行时，方法体内的局部变量(包括基础数据类型、对象的引用)都在栈上创建，并在方法执行结束时这些局部变">
+<meta property="og:image" content="http://dn-arsenan.qbox.me/14730647330766.jpg">
+<meta property="og:updated_time" content="2016-09-09T02:03:46.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Android事件分发机制">
-<meta name="twitter:description" content="分发流程概述所有Touch事件都被封装成MotionEvent对象，包括Touch的位置、时间、历史记录等等。事件最先传递给当前的Activity，由Activity的dispatchTouchEvent来进行事件的分发事件开始交给Activity所附属的Window来进行分发，Window是个抽象类，具体的实现在PhoneWindow当中其中mDecor为DecorView，即根View即事件传">
-<meta name="twitter:image" content="http://dn-arsenan.qbox.me/14726430496180.jpg">
+<meta name="twitter:title" content="JVM内存管理">
+<meta name="twitter:description" content="JVM内存分配策略Java程序运行时的内存分配策略有三种，分别是静态分配、栈式分配和堆式分配，所使用的内存空间依次对应为静态存储区(方法区)、栈区和堆区
+
+静态存储区(方法区)主要存放静态数据、全局static数据和常量。这块内存在程序编译时就已经分配好，并且在程序整个运行期间都存在
+
+栈区当方法被执行时，方法体内的局部变量(包括基础数据类型、对象的引用)都在栈上创建，并在方法执行结束时这些局部变">
+<meta name="twitter:image" content="http://dn-arsenan.qbox.me/14730647330766.jpg">
 
 
 
@@ -123,9 +130,9 @@
 
 
 
-  <link rel="canonical" href="http://gunner4life.com/blog/2016/08/31/Android事件分发机制/"/>
+  <link rel="canonical" href="http://gunner4life.com/blog/2016/09/09/JVM内存管理/"/>
 
-  <title> Android事件分发机制 | Arse_nan </title>
+  <title> JVM内存管理 | Arse_nan </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -255,7 +262,7 @@
             
             
               
-                Android事件分发机制
+                JVM内存管理
               
             
           </h1>
@@ -267,8 +274,8 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-08-31T20:42:09+08:00" content="2016-08-31">
-              2016-08-31
+            <time itemprop="dateCreated" datetime="2016-09-09T10:02:54+08:00" content="2016-09-09">
+              2016-09-09
             </time>
           </span>
 
@@ -295,27 +302,27 @@
       
 
       
-        <h2 id="分发流程概述"><a href="#分发流程概述" class="headerlink" title="分发流程概述"></a>分发流程概述</h2><p>所有Touch事件都被封装成MotionEvent对象，包括Touch的位置、时间、历史记录等等。事件最先传递给当前的Activity，由Activity的dispatchTouchEvent来进行事件的分发<br><img src="http://dn-arsenan.qbox.me/14726430496180.jpg" alt=""><br>事件开始交给Activity所附属的Window来进行分发，Window是个抽象类，具体的实现在PhoneWindow当中<br><img src="http://dn-arsenan.qbox.me/14726432484932.jpg" alt=""><br>其中mDecor为DecorView，即根View<br><img src="http://dn-arsenan.qbox.me/14726431452301.jpg" alt=""><br>即事件传递到了ViewGroup的dispatchTouchEvent中，然后继续传递给子元素(默认情况)<br>总的来说，当一个点击事件产生后，它的传递过程遵循如下顺序：Activity -&gt; Window -&gt; View，即事件总是先传递给Activity，Activity再传递给Window，最后Window再传递给顶级的View(DecorView)，顶级View接收到事件后，就会按照事件分发机制去分发事件。如果一个View的onTouchEvent返回false(没有消耗事件)，那么它父容器的onTouchEvent将会被调用，依次类推，如果所有的元素都不去处理这个事件，那么这个事件最终将会传递给Activity处理，即Activity的onTouchEvent方法会被调用</p>
-<h2 id="要点"><a href="#要点" class="headerlink" title="要点"></a>要点</h2><ul>
-<li>如果ViewGroup的onInterceptTouchEvent方法返回true就表示它要拦截当前事件(ViewGroup的onInterceptTouchEvent默认返回false，即默认不拦截任何事件)，接着这个ViewGroup的onTouchEvent就会被调用，如果onInterceptTouchEvent返回false，那么就会继续向下调用子元素的dispatchTouchEvent方法</li>
-<li>当一个View需要处理事件的时候，如果它没有设置onTouchListener，那么就会直接调用onTouchEvent，如果设置了onTouchListener，那么就要看Listener的onTouch方法返回值，为false，则当前View的onTouchEvent方法会被调用，如果为true，则onTouchEvent将不会被调用。</li>
-<li>给View设置onTouchListener，其优先级比onTouchEvent要高，在onTouchEvent方法中，如果设置了onClickListener，那么它的onClick方法会被调用。可以看出，onClickListener的优先级最低</li>
-<li>某个View一旦拦截了某个事件，那么这一个事件序列里面后续的Move、Down等事件都会交由它处理，并且它的onTnterceptTouchEvent不会再调用</li>
-<li>某个View一旦开始处理事件，如果它不消耗ACTION_DOWN事件，那么同一时间序列中的其他事件都不会再交给它来处理，并且事件将重新交给它的父元素处理，即父元素的onTouchEvent会被调用</li>
-<li>View的onTouchEvent默认都会消耗事件(返回true)，除非它是不可点击的(clickable和longClickable同时为false)，但是enable属性不会影响onTouchEvent返回值</li>
-<li>事件传递过程是由外向内的，即事件总是先传递给父元素，然后再由父元素分发给子View，通过requestDisallowInterceptTouchEvent方法可以在子元素中干预父元素的时间分发，但是ACTION_DOWN事件除外，它不受此影响</li>
+        <h2 id="JVM内存分配策略"><a href="#JVM内存分配策略" class="headerlink" title="JVM内存分配策略"></a>JVM内存分配策略</h2><p>Java程序运行时的内存分配策略有三种，分别是静态分配、栈式分配和堆式分配，所使用的内存空间依次对应为静态存储区(方法区)、栈区和堆区</p>
+<ul>
+<li><p>静态存储区(方法区)<br>主要存放静态数据、全局static数据和常量。这块内存在程序编译时就已经分配好，并且在程序整个运行期间都存在</p>
+</li>
+<li><p>栈区<br>当方法被执行时，方法体内的局部变量(包括基础数据类型、对象的引用)都在栈上创建，并在方法执行结束时这些局部变量所持有的内存将会自动被释放。由于栈内存分配计算内置于处理器的指令集中，效率很高，但是分配的内存容量有限</p>
+</li>
+<li><p>堆区<br>又称动态内存分配，通常就是指在程序运行时直接new出来的内存，也就是对象的实例，这部分内存在不使用时将会由Java垃圾回收器来负责回收<br>在Java中，堆被划分为两个不同的区域：新生代(Young)、老年代(Old). 其中新生代又被划分为三个区域: Eden、From Survivor、To Survivor<br>堆的内存模型大致为:<br><img src="http://dn-arsenan.qbox.me/14730647330766.jpg" alt=""><br>其中JVM每次只会使用Eden和其中一块Survivor区域来为对象服务，所以无论什么时候，总是有一块Survivor区域是空闲的. 因此，新生代实际可用的内存空间为9/10(即90%)的新生代空间</p>
+</li>
 </ul>
-<ol>
-<li><p>View不处理事件流程图<br><img src="http://dn-arsenan.qbox.me/ignorant-view-example.jpg" alt="ignorant-view-example"></p>
+<h2 id="GC堆"><a href="#GC堆" class="headerlink" title="GC堆"></a>GC堆</h2><p>Java中的堆是GC收集垃圾的主要区域。GC分为两种: Minor GC、Major GC、Full GC</p>
+<ul>
+<li><p>Minor GC<br>Minor GC是发生在新生代中的垃圾收集动作，所采用的是复制算法<br>新生代几乎是所有Java对象出生的地方，也是GC垃圾收集的频繁区域. 当对象在Eden(包括一个Survivor区域，这里假设是from区域)出生后，在经过一次Minor GC后，如果对象还存活，并且能够被另一块Survivor区域所容纳，则使用复制算法将这些仍存活的对象复制到另一块Survivor区域(前面假设诞生在from区域，则这里是to区域)中，然后清理所使用过的Eden以及Survivor区域，并且将这些对象的年龄设置为1，以后对象在Survivor区每熬过一次Minor GC，就将对象的年龄+1，当对象年龄达到某个值时(默认15)，这些对象就会成为老年代。但这也不是绝对的，对于一些较大的对象则直接进入到老年代</p>
 </li>
-<li><p>View处理事件流程图<br><img src="http://dn-arsenan.qbox.me/interested-view-example.jpg" alt="interested-view-example"></p>
+<li><p>Major GC<br>Major GC是发生在老年代的垃圾收集动作，所采用的是标记-清除算法<br>Major GC发生的次数不会有Major GC那么频繁，并且做一次Major GC要比进行一次Minor GC的时间更长. 另外，标记-清除算法收集垃圾的时候会产生许多的内存碎片(即不连续的内存空间)，此后需要为较大的对象分配内存空间时，若无法找到足够的连续的内存空间，就会提前触发一次GC</p>
 </li>
-<li><p>ViewGroup拦截事件处理流程图<br><img src="http://dn-arsenan.qbox.me/14726463384715.jpg" alt=""></p>
+<li><p>Full GC<br>Full GC是清理整个堆(包括新生代和老年代空间)</p>
 </li>
-</ol>
+</ul>
+<h2 id="GC回收原理"><a href="#GC回收原理" class="headerlink" title="GC回收原理"></a>GC回收原理</h2><p>垃圾回收器从GC Roots的点开始遍历对象，凡是可以达到的点(存在引用关系)都会标记为存活，堆中不可到达的对象都会标记成垃圾，然后被清理掉<br>Java使用有向图的方式进行内存管理，可以消除引用循环的问题，例如有三个对象，相互引用，只要它们和根进程不可达，那么GC也是可以回收他们的</p>
 <h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
-<li><a href="http://a.codekk.com/detail/Android/Trinea/%E5%85%AC%E5%85%B1%E6%8A%80%E6%9C%AF%E7%82%B9%E4%B9%8B%20View%20%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92" target="_blank" rel="external">公共技术点之View事件传递</a></li>
-<li><a href="http://trinea.github.io/download/pdf/android/PRE_andevcon_mastering-the-android-touch-system.pdf" target="_blank" rel="external">Mastering the Android Touch System</a></li>
+<li><a href="http://blog.csdn.net/gyqjn/article/details/49848473" target="_blank" rel="external">Java GC、新生代、老年代</a></li>
 </ul>
 
       
@@ -342,16 +349,16 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/blog/2016/08/31/Android消息机制/" rel="next" title="Android消息机制">
-                <i class="fa fa-chevron-left"></i> Android消息机制
+              <a href="/blog/2016/09/02/Android-View绘制机制/" rel="next" title="Android View绘制机制">
+                <i class="fa fa-chevron-left"></i> Android View绘制机制
               </a>
             
           </div>
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/blog/2016/09/01/Android界面显示分析/" rel="prev" title="Android界面显示分析">
-                Android界面显示分析 <i class="fa fa-chevron-right"></i>
+              <a href="/blog/2016/09/09/Android内存泄露总结/" rel="prev" title="Android内存泄露总结">
+                Android内存泄露总结 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -459,7 +466,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#分发流程概述"><span class="nav-number">1.</span> <span class="nav-text">分发流程概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#要点"><span class="nav-number">2.</span> <span class="nav-text">要点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考资料"><span class="nav-number">3.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#JVM内存分配策略"><span class="nav-number">1.</span> <span class="nav-text">JVM内存分配策略</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GC堆"><span class="nav-number">2.</span> <span class="nav-text">GC堆</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GC回收原理"><span class="nav-number">3.</span> <span class="nav-text">GC回收原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考资料"><span class="nav-number">4.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
             
           </div>
         </section>
