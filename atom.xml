@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://gunner4life.com/"/>
-  <updated>2016-09-09T02:04:42.000Z</updated>
+  <updated>2016-09-10T09:13:10.000Z</updated>
   <id>http://gunner4life.com/</id>
   
   <author>
@@ -14,6 +14,61 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Android ClassLoader工作机制</title>
+    <link href="http://gunner4life.com//blog/2016/09/10/Android-ClassLoader%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/"/>
+    <id>http://gunner4life.com//blog/2016/09/10/Android-ClassLoader工作机制/</id>
+    <published>2016-09-10T09:12:43.000Z</published>
+    <updated>2016-09-10T09:13:10.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>ClassLoader是专门用来处理类加载工作的，所以也称为类加载器，并且一个运行的App中不仅只有一个类加载器:<br>在Android系统启动的时候会创建一个Boot类型的ClassLoader实例(BootClassLoader)，用于加载一些系统Framework层级需要的类，我们的Android应用里也需要用到一些系统的类，所以App启动的时候也会把这个Boot类型的ClassLoader传进来。此外，App也有自己的类，这些类保存在APK的dex文件里面，所以App启动的时候，也会创建一个自己的ClassLoader实例(PathClassLoader)，用于加载自己dex文件中的类</p>
+<h2 id="创建自己的ClassLoader实例"><a href="#创建自己的ClassLoader实例" class="headerlink" title="创建自己的ClassLoader实例"></a>创建自己的ClassLoader实例</h2><p>首先先看一下它的构造方法<br><img src="http://dn-arsenan.qbox.me/14734004305111.jpg" alt=""><br>可以看到，创建一个ClassLoader实例的时候，需要使用一个现有的ClassLoader实例作为新创建的实例的Parent. 这样一来，一个Android应用，甚至整个Android系统里所有的ClassLoader实例都会被一棵树关联起来，这也是ClassLoader的<strong>双亲代理模型</strong>的特点</p>
+<h2 id="ClassLoader双亲代理模型加载类的特点和作用"><a href="#ClassLoader双亲代理模型加载类的特点和作用" class="headerlink" title="ClassLoader双亲代理模型加载类的特点和作用"></a>ClassLoader双亲代理模型加载类的特点和作用</h2><p>JVM中ClassLoader通过defineClass方法加载jar里面的Class, 而Android中这个方法是被弃用了<br><img src="http://dn-arsenan.qbox.me/14734009948288.jpg" alt=""><br>取而代之的是loadClass方法<br><img src="http://dn-arsenan.qbox.me/14734013273864.jpg" alt=""></p>
+<h3 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h3><p>从上面的源码中可以看出，loadClass方法在加载一个类的实例的时候:</p>
+<ol>
+<li>会先查询当前ClassLoader实例是否加载过此类，有就返回</li>
+<li>如果没有，查询Parent是否已经加载过此类，如果已经加载过，就直接返回Parent加载的类</li>
+<li>如果继承线路上的ClassLoader都没有加载，才有Child执行类的加载工作</li>
+</ol>
+<p>这样做有个明显的特点，如果一个类被位于树根的ClassLoader加载过，那么在以后整个系统的生命周期内，这个类永远不会被重新加载</p>
+<h3 id="作用"><a href="#作用" class="headerlink" title="作用"></a>作用</h3><ul>
+<li><p>共享功能<br>一些Framework层级的类一旦被顶层的ClassLoader加载过就缓存在内存里面，以后任何地方用到就都不需要重新加载</p>
+</li>
+<li><p>隔离功能<br>不同继承线路上的ClassLoader加载的类肯定不是同一个类，这样的限制避免了用户自己的代码冒充核心类库的类访问核心类库包可见成员的情况，比如String, 如果在一个应用里面能够简单的用自定义的String类把这个系统的String类给替换掉，那将会有严重的安全问题</p>
+</li>
+</ul>
+<h2 id="使用ClassLoader的注意事项"><a href="#使用ClassLoader的注意事项" class="headerlink" title="使用ClassLoader的注意事项"></a>使用ClassLoader的注意事项</h2><ul>
+<li><p>如果希望通过动态加载的方式，加载一个新版本的dex文件，使用里面的新类替换原有的旧类，从而修复原有类的bug，那么必须保证在加载新类的时候，旧类还没有被加载，因为如果已经加载过旧类，那么ClassLoader会一直优先使用旧类</p>
+</li>
+<li><p>如果旧类总是优先于新类被加载，我们也可以使用一个与加载旧类的ClassLoader没有树继承关系的另一个ClassLoader来加载新类，因为ClassLoader只会检查其Parent有没有加载过当前要加载的类，如果两个ClassLoader没有继承关系，那么旧类和新类都能被加载</p>
+</li>
+<li><p>在Java中，只有两个实例的类名、包名以及加载其的ClassLoader都相同，才会被认为是同一种类型，即</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">同一个Class = 相同的ClassName + PackageName + ClassLoader</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="类加载器初始化及加载过程"><a href="#类加载器初始化及加载过程" class="headerlink" title="类加载器初始化及加载过程"></a>类加载器初始化及加载过程</h2><p>在Android中，ClassLoader是一个抽象类，实际开发过程中，我们一般使用其具体的子类如: DexClassLoader、PathClassLoader来加载类，它们的不同支出是: </p>
+<ul>
+<li>DexClassLoader可以加载jar/apk/dex，可以从SD卡中加载未安装的apk</li>
+<li>PathClassLoader只能加载系统中已经安装过的apk</li>
+</ul>
+<h3 id="类加载器初始化"><a href="#类加载器初始化" class="headerlink" title="类加载器初始化"></a>类加载器初始化</h3><p>两者的构造方法如下:<br><img src="http://dn-arsenan.qbox.me/14734033909388.jpg" alt=""><br>两者只是简单的对BaseDexClassLoader做了一下封装，具体的实现还是在父类里，不同的是PathClassLoader的optimizedDirectory传的是null<br>而在BaseDexClassLoader中<br><img src="http://dn-arsenan.qbox.me/14734036410378.jpg" alt=""><br>这里创建了一个DexPathList实例</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div></pre></td><td class="code"><pre><div class="line">public DexPathList(ClassLoader definingContext, String dexPath,</div><div class="line">        String libraryPath, File optimizedDirectory) &#123;</div><div class="line">    ……</div><div class="line">    this.dexElements = makeDexElements(splitDexPath(dexPath), optimizedDirectory);</div><div class="line">&#125;</div><div class="line"></div><div class="line">private static Element[] makeDexElements(ArrayList&lt;File&gt; files,</div><div class="line">        File optimizedDirectory) &#123;</div><div class="line">    ArrayList&lt;Element&gt; elements = new ArrayList&lt;Element&gt;();</div><div class="line">    for (File file : files) &#123;</div><div class="line">        ZipFile zip = null;</div><div class="line">        DexFile dex = null;</div><div class="line">        String name = file.getName();</div><div class="line">        if (name.endsWith(DEX_SUFFIX)) &#123;</div><div class="line">            dex = loadDexFile(file, optimizedDirectory);</div><div class="line">        &#125; else if (name.endsWith(APK_SUFFIX) || name.endsWith(JAR_SUFFIX)</div><div class="line">                || name.endsWith(ZIP_SUFFIX)) &#123;</div><div class="line">            zip = new ZipFile(file);</div><div class="line">        &#125;</div><div class="line">        ……</div><div class="line">        if ((zip != null) || (dex != null)) &#123;</div><div class="line">            elements.add(new Element(file, zip, dex));</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">    return elements.toArray(new Element[elements.size()]);</div><div class="line">&#125;</div><div class="line"></div><div class="line">private static DexFile loadDexFile(File file, File optimizedDirectory)</div><div class="line">        throws IOException &#123;</div><div class="line">    if (optimizedDirectory == null) &#123;</div><div class="line">        return new DexFile(file);</div><div class="line">    &#125; else &#123;</div><div class="line">        String optimizedPath = optimizedPathFor(file, optimizedDirectory);</div><div class="line">        return DexFile.loadDex(file.getPath(), optimizedPath, 0);</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line">/**</div><div class="line"> * Converts a dex/jar file path and an output directory to an</div><div class="line"> * output file path for an associated optimized dex file.</div><div class="line"> */</div><div class="line">private static String optimizedPathFor(File path,</div><div class="line">        File optimizedDirectory) &#123;</div><div class="line">    String fileName = path.getName();</div><div class="line">    if (!fileName.endsWith(DEX_SUFFIX)) &#123;</div><div class="line">        int lastDot = fileName.lastIndexOf(&quot;.&quot;);</div><div class="line">        if (lastDot &lt; 0) &#123;</div><div class="line">            fileName += DEX_SUFFIX;</div><div class="line">        &#125; else &#123;</div><div class="line">            StringBuilder sb = new StringBuilder(lastDot + 4);</div><div class="line">            sb.append(fileName, 0, lastDot);</div><div class="line">            sb.append(DEX_SUFFIX);</div><div class="line">            fileName = sb.toString();</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">    File result = new File(optimizedDirectory, fileName);</div><div class="line">    return result.getPath();</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>可以看到，optimizedDirectory是用来缓存我们需要加载的dex文件的，并创建一个DexFile对象，如果它为null，那么会直接使用dex文件原有的路径来创建DexFile对象<br>optimizedDirectory必须是一个<strong>内部存储路径</strong>(<strong>无论哪种动态加载，加载的可执行文件一定要存放在内部存储</strong>). DexClassLoader可以加载外部的dex，因为这个dex会被复制到DexClassLoader指定的内部路径(optimizedDirectory)，然后供DexClassLoader加载. 而PathClassLoader没有optimizedDirectory，所以它只能加载内部的dex，这些大都是存在系统中已经安装过的apk里</p>
+<h3 id="加载类的过程"><a href="#加载类的过程" class="headerlink" title="加载类的过程"></a>加载类的过程</h3><p>上面说过当某个类第一次被加载时，会调用findClass方法，而BaseDexClassLoader重载了这个方法，如下:<br><img src="http://dn-arsenan.qbox.me/14734179814754.jpg" alt=""><br>调用了DexPathList的findClass方法<br><img src="http://dn-arsenan.qbox.me/14734180508605.jpg" alt=""><br>这里遍历了之前所有的DexFile实例，其实也就是遍历了所有加载过的dex文件，再调用loadClassBinaryName方法一个个尝试能不能加载想要的类，而loadClassBinaryName中调用了Native方法definaClass来加载类<br>这样就完成了一个类的加载工作</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a href="https://segmentfault.com/a/1190000004062880" target="_blank" rel="external">Android动态加载基础 ClassLoader工作机制</a></li>
+</ul>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;ClassLoader是专门用来处理类加载工作的，所以也称为类加载器，并且一个运行的App中不仅只有一个类加载器:&lt;br&gt;在Android系统启动的时候会创建一个Boot类型的ClassLoader实例(BootClassLoader)，用于加载一些系统Framework层
+    
+    </summary>
+    
+    
+  </entry>
   
   <entry>
     <title>Android内存泄露总结</title>
